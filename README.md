@@ -1,3 +1,13 @@
+---
+title: IELTS Coach
+emoji: 🎓
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # IELTS Coach 🎓
 
 An AI-powered IELTS preparation platform covering all four skills:
@@ -16,7 +26,9 @@ Bilingual interface (English / O‘zbekcha) — toggle with the **UZ/EN** button
 
 ## Tech stack
 
-- **Backend:** Python + FastAPI, calling the Claude API (Anthropic SDK).
+- **Backend:** Python + FastAPI. Pluggable LLM provider: **Google Gemini** (free tier,
+  used by the public demo) or **Claude** (Anthropic SDK) — chosen by which API key is set.
+  Structured outputs are validated with Pydantic schemas.
 - **Frontend:** plain HTML/CSS/JS — no build step.
 - **Speech:** the browser's Web Speech API (SpeechRecognition + SpeechSynthesis).
   Works best in Chrome / Edge.
@@ -30,11 +42,11 @@ Bilingual interface (English / O‘zbekcha) — toggle with the **UZ/EN** button
    pip install -r requirements.txt
    ```
 
-2. Add your Claude API key:
+2. Add an API key (Gemini is free — https://aistudio.google.com/apikey):
 
    ```bash
    cp .env.example .env
-   # then edit .env and paste your key from https://console.anthropic.com/
+   # then edit .env: set GEMINI_API_KEY (free) or ANTHROPIC_API_KEY
    ```
 
 3. Run the server (from the `backend` folder):

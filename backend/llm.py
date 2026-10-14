@@ -1,22 +1,104 @@
-"""Claude-powered IELTS helpers: Speaking, Writing, Listening, Reading.
+"""AI-powered IELTS helpers: Speaking, Writing, Listening, Reading.
 
-All model calls go through the official Anthropic Python SDK.
+Two providers are supported, chosen by which key is set in the environment:
+- GEMINI_API_KEY    -> Google Gemini (has a free tier; used for the public demo)
+- ANTHROPIC_API_KEY -> Claude (paid, higher quality)
+Every feature goes through two helpers, _chat() and _structured(), so the
+rest of the file does not care which provider is active.
 """
 from __future__ import annotations
 
 import os
-from typing import Literal
+from typing import Literal, TypeVar
 
-import anthropic
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 load_dotenv()
 
-MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
+if os.getenv("GEMINI_API_KEY"):
+    from google import genai
+    from google.genai import types
 
-# The client resolves ANTHROPIC_API_KEY from the environment automatically.
-client = anthropic.Anthropic()
+    PROVIDER = "gemini"
+    MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+    gemini = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+else:
+    import anthropic
+
+    PROVIDER = "claude"
+    MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
+    # The client resolves ANTHROPIC_API_KEY from the environment automatically.
+    claude = anthropic.Anthropic()
+
+T = TypeVar("T", bound=BaseModel)
+
+# Gemini counts its hidden "thinking" tokens inside max_output_tokens, so give
+# it headroom on top of the visible-answer budget.
+_GEMINI_THINKING_HEADROOM = 8192
+
+
+def key_set() -> bool:
+    return bool(os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
+
+
+def _chat(system: str, messages: list[dict], max_tokens: int) -> str:
+    """Plain-text reply to a conversation of {role, content} turns."""
+    if PROVIDER == "gemini":
+        contents = [
+            types.Content(
+                role="model" if m["role"] == "assistant" else "user",
+                parts=[types.Part(text=m["content"])],
+            )
+            for m in messages
+        ]
+        resp = gemini.models.generate_content(
+            model=MODEL,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=max_tokens + _GEMINI_THINKING_HEADROOM,
+            ),
+        )
+        return (resp.text or "").strip()
+
+    resp = claude.messages.create(
+        model=MODEL,
+        max_tokens=max_tokens,
+        # Thinking is always on for Opus 5.5; low effort keeps live replies fast.
+        output_config={"effort": "low"},
+        system=system,
+        messages=messages,
+    )
+    return "".join(b.text for b in resp.content if b.type == "text").strip()
+
+
+def _structured(system: str | None, user: str, schema: type[T], max_tokens: int) -> dict:
+    """Ask for a JSON answer that matches a Pydantic schema; return it as a dict."""
+    if PROVIDER == "gemini":
+        resp = gemini.models.generate_content(
+            model=MODEL,
+            contents=user,
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=max_tokens + _GEMINI_THINKING_HEADROOM,
+                response_mime_type="application/json",
+                response_schema=schema,
+            ),
+        )
+        parsed = resp.parsed if isinstance(resp.parsed, schema) else schema.model_validate_json(resp.text)
+        return parsed.model_dump()
+
+    kwargs = {"system": system} if system else {}
+    resp = claude.messages.parse(
+        model=MODEL,
+        max_tokens=max_tokens,
+        thinking={"type": "adaptive"},
+        messages=[{"role": "user", "content": user}],
+        output_format=schema,
+        **kwargs,
+    )
+    return resp.parsed_output.model_dump()
 
 
 # --------------------------------------------------------------------------- #
@@ -88,15 +170,7 @@ Reply with ONLY your spoken turn — no labels, no meta text."""
 
 def speaking_reply(part: int, messages: list[dict]) -> str:
     """Return the examiner's next spoken turn."""
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=2000,
-        # Thinking is always on for Opus 5.5; low effort keeps live replies fast.
-        output_config={"effort": "low"},
-        system=_SPEAKING_SYSTEM.format(part=part),
-        messages=messages,
-    )
-    return "".join(b.text for b in resp.content if b.type == "text").strip()
+    return _chat(_SPEAKING_SYSTEM.format(part=part), messages, max_tokens=2000)
 
 
 _SPEAKING_ASSESS_SYSTEM = """You are an experienced IELTS Speaking examiner.
@@ -111,15 +185,7 @@ Notes:
 
 def speaking_assess(messages: list[dict]) -> dict:
     transcript = _messages_to_transcript(messages, you_role="Candidate", them_role="Examiner")
-    resp = client.messages.parse(
-        model=MODEL,
-        max_tokens=3000,
-        thinking={"type": "adaptive"},
-        system=_SPEAKING_ASSESS_SYSTEM,
-        messages=[{"role": "user", "content": f"Transcript:\n\n{transcript}"}],
-        output_format=BandFeedback,
-    )
-    return resp.parsed_output.model_dump()
+    return _structured(_SPEAKING_ASSESS_SYSTEM, f"Transcript:\n\n{transcript}", BandFeedback, max_tokens=3000)
 
 
 # --------------------------------------------------------------------------- #
@@ -141,15 +207,7 @@ def writing_assess(task: int, prompt: str, essay: str) -> dict:
         f"Question / prompt:\n{prompt}\n\n"
         f"Candidate's essay:\n{essay}"
     )
-    resp = client.messages.parse(
-        model=MODEL,
-        max_tokens=4000,
-        thinking={"type": "adaptive"},
-        system=_WRITING_ASSESS_SYSTEM,
-        messages=[{"role": "user", "content": user}],
-        output_format=BandFeedback,
-    )
-    return resp.parsed_output.model_dump()
+    return _structured(_WRITING_ASSESS_SYSTEM, user, BandFeedback, max_tokens=4000)
 
 
 # --------------------------------------------------------------------------- #
@@ -164,14 +222,7 @@ def reading_generate(level: str, topic: str | None = None) -> dict:
         "(mcq, tf = True/False/Not Given, gap = fill in one word). "
         "Make questions answerable strictly from the passage."
     )
-    resp = client.messages.parse(
-        model=MODEL,
-        max_tokens=6000,
-        thinking={"type": "adaptive"},
-        messages=[{"role": "user", "content": user}],
-        output_format=ReadingPassage,
-    )
-    return resp.parsed_output.model_dump()
+    return _structured(None, user, ReadingPassage, max_tokens=6000)
 
 
 def listening_generate(level: str, topic: str | None = None) -> dict:
@@ -183,14 +234,7 @@ def listening_generate(level: str, topic: str | None = None) -> dict:
         "(mcq, tf, gap). Questions must be answerable only from the transcript. "
         "Do NOT include stage directions like [pause]; write it as it should be spoken."
     )
-    resp = client.messages.parse(
-        model=MODEL,
-        max_tokens=6000,
-        thinking={"type": "adaptive"},
-        messages=[{"role": "user", "content": user}],
-        output_format=ListeningExercise,
-    )
-    return resp.parsed_output.model_dump()
+    return _structured(None, user, ListeningExercise, max_tokens=6000)
 
 
 # --------------------------------------------------------------------------- #

@@ -1,7 +1,6 @@
-"""FastAPI app: serves the IELTS frontend and the Claude-powered API."""
+"""FastAPI app: serves the IELTS frontend and the AI-powered API."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -49,7 +48,7 @@ class GenerateReq(BaseModel):
 # --------------------------------------------------------------------------- #
 @app.get("/api/health")
 def health():
-    return {"ok": True, "model": llm.MODEL, "key_set": bool(os.getenv("ANTHROPIC_API_KEY"))}
+    return {"ok": True, "provider": llm.PROVIDER, "model": llm.MODEL, "key_set": llm.key_set()}
 
 
 # --------------------------------------------------------------------------- #
