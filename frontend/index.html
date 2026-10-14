@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IELTS Coach — Speaking · Writing · Listening · Reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#/home">
+      <span class="logo">IELTS</span><span class="logo-dot">Coach</span>
+    </a>
+    <nav class="tabs" id="tabs">
+      <a href="#/home"      data-route="home"      data-i18n="nav.home">Home</a>
+      <a href="#/speaking"  data-route="speaking"  data-i18n="nav.speaking">Speaking</a>
+      <a href="#/writing"   data-route="writing"   data-i18n="nav.writing">Writing</a>
+      <a href="#/listening" data-route="listening" data-i18n="nav.listening">Listening</a>
+      <a href="#/reading"   data-route="reading"   data-i18n="nav.reading">Reading</a>
+    </nav>
+    <button class="lang-toggle" id="langToggle" title="Language">UZ</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- HOME ------------------------------------------------------------ -->
+  <section class="view" data-view="home">
+    <div class="hero">
+      <h1 data-i18n="home.title">Master IELTS with an AI coach</h1>
+      <p data-i18n="home.subtitle">Practise Speaking with a real-time AI examiner, get band-scored feedback on your Writing, and train Listening &amp; Reading with unlimited fresh material.</p>
+      <a class="btn btn-primary" href="#/speaking" data-i18n="home.cta">Start Speaking</a>
+    </div>
+    <div class="cards">
+      <a class="card" href="#/speaking">
+        <div class="card-ico">🎙️</div>
+        <h3 data-i18n="nav.speaking">Speaking</h3>
+        <p data-i18n="home.card.speaking">Talk to an AI examiner with your microphone. Parts 1–3, then get a band estimate.</p>
+      </a>
+      <a class="card" href="#/writing">
+        <div class="card-ico">✍️</div>
+        <h3 data-i18n="nav.writing">Writing</h3>
+        <p data-i18n="home.card.writing">Submit Task 1 or Task 2 essays and receive detailed, criterion-by-criterion feedback.</p>
+      </a>
+      <a class="card" href="#/listening">
+        <div class="card-ico">🎧</div>
+        <h3 data-i18n="nav.listening">Listening</h3>
+        <p data-i18n="home.card.listening">Generate fresh audio exercises read aloud, then answer and check yourself.</p>
+      </a>
+      <a class="card" href="#/reading">
+        <div class="card-ico">📖</div>
+        <h3 data-i18n="nav.reading">Reading</h3>
+        <p data-i18n="home.card.reading">Academic passages with True/False/Not Given, multiple choice and gap-fill questions.</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- SPEAKING -------------------------------------------------------- -->
+  <section class="view" data-view="speaking">
+    <div class="panel">
+      <h2 data-i18n="speaking.title">Speaking practice</h2>
+      <p class="muted" data-i18n="speaking.hint">Choose a part, press the mic and talk. The examiner replies out loud.</p>
+
+      <div class="row">
+        <div class="segmented" id="speakingPart">
+          <button class="seg active" data-part="1">Part 1</button>
+          <button class="seg" data-part="2">Part 2</button>
+          <button class="seg" data-part="3">Part 3</button>
+        </div>
+        <button class="btn" id="speakingReset" data-i18n="speaking.reset">Restart</button>
+      </div>
+
+      <div class="chat" id="speakingChat"></div>
+
+      <div class="mic-row">
+        <button class="mic" id="micBtn" title="Hold to speak">🎤</button>
+        <div class="mic-status" id="micStatus" data-i18n="speaking.micIdle">Press the mic to speak</div>
+        <button class="btn" id="speakingType" data-i18n="speaking.type">Type instead</button>
+      </div>
+
+      <div class="type-row hidden" id="speakingTypeRow">
+        <input type="text" id="speakingInput" placeholder="Type your answer…" />
+        <button class="btn btn-primary" id="speakingSend" data-i18n="speaking.send">Send</button>
+      </div>
+
+      <button class="btn btn-primary wide" id="speakingFinish" data-i18n="speaking.finish">Finish &amp; get feedback</button>
+      <div id="speakingFeedback"></div>
+    </div>
+  </section>
+
+  <!-- WRITING --------------------------------------------------------- -->
+  <section class="view" data-view="writing">
+    <div class="panel">
+      <h2 data-i18n="writing.title">Writing feedback</h2>
+      <p class="muted" data-i18n="writing.hint">Paste the question and your essay. You'll get band scores for each criterion.</p>
+
+      <div class="segmented" id="writingTask">
+        <button class="seg active" data-task="1">Task 1</button>
+        <button class="seg" data-task="2">Task 2</button>
+      </div>
+
+      <label class="lbl" data-i18n="writing.promptLabel">Question / prompt</label>
+      <textarea id="writingPrompt" rows="3" placeholder="e.g. Some people think that…"></textarea>
+
+      <label class="lbl" data-i18n="writing.essayLabel">Your essay</label>
+      <textarea id="writingEssay" rows="12" placeholder="Write or paste your essay here…"></textarea>
+      <div class="wordcount"><span id="writingWords">0</span> <span data-i18n="writing.words">words</span></div>
+
+      <button class="btn btn-primary wide" id="writingAssess" data-i18n="writing.assess">Assess my essay</button>
+      <div id="writingFeedback"></div>
+    </div>
+  </section>
+
+  <!-- LISTENING ------------------------------------------------------- -->
+  <section class="view" data-view="listening">
+    <div class="panel">
+      <h2 data-i18n="listening.title">Listening practice</h2>
+      <p class="muted" data-i18n="listening.hint">Generate an exercise, play the audio and answer the questions.</p>
+
+      <div class="row">
+        <select class="level" id="listeningLevel">
+          <option value="A2">A2 · easy</option>
+          <option value="B1">B1</option>
+          <option value="B2" selected>B2</option>
+          <option value="C1">C1 · hard</option>
+        </select>
+        <button class="btn btn-primary" id="listeningGen" data-i18n="listening.generate">Generate</button>
+      </div>
+
+      <div id="listeningPlayer" class="hidden">
+        <div class="audio-controls">
+          <button class="btn btn-primary" id="listeningPlay" data-i18n="listening.play">▶ Play</button>
+          <button class="btn" id="listeningStop" data-i18n="listening.stop">■ Stop</button>
+          <button class="btn" id="listeningShowScript" data-i18n="listening.showScript">Show transcript</button>
+        </div>
+        <div class="transcript hidden" id="listeningTranscript"></div>
+      </div>
+
+      <div id="listeningQuestions"></div>
+    </div>
+  </section>
+
+  <!-- READING --------------------------------------------------------- -->
+  <section class="view" data-view="reading">
+    <div class="panel">
+      <h2 data-i18n="reading.title">Reading practice</h2>
+      <p class="muted" data-i18n="reading.hint">Generate a passage and answer the questions, then check your score.</p>
+
+      <div class="row">
+        <select class="level" id="readingLevel">
+          <option value="A2">A2 · easy</option>
+          <option value="B1">B1</option>
+          <option value="B2" selected>B2</option>
+          <option value="C1">C1 · hard</option>
+        </select>
+        <button class="btn btn-primary" id="readingGen" data-i18n="reading.generate">Generate</button>
+      </div>
+
+      <article class="passage hidden" id="readingPassage"></article>
+      <div id="readingQuestions"></div>
+    </div>
+  </section>
+
+</main>
+
+<div class="loader hidden" id="loader"><div class="spinner"></div><span id="loaderText">Working…</span></div>
+
+<script src="js/i18n.js"></script>
+<script src="js/app.js"></script>
+<script src="js/speaking.js"></script>
+<script src="js/writing.js"></script>
+<script src="js/listening.js"></script>
+<script src="js/reading.js"></script>
+</body>
+</html>
