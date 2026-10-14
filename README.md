@@ -50,7 +50,7 @@ command runs everything.
 
 ## Notes
 
-- The default model is `claude-opus-4-8`. Set `ANTHROPIC_MODEL` in `.env` to use a
-  cheaper/faster model (e.g. `claude-sonnet-5` or `claude-haiku-4-5`).
+- The default model is `claude-opus-5-5`. Set `ANTHROPIC_MODEL` in `.env` to use a
+  cheaper/faster model (e.g. `claude-sonnet-5-5` or `claude-haiku-5-5`).
 - Microphone access requires `http://localhost` or HTTPS.
 - Reading/Listening exercises are freshly generated each time, so no two are alike.

@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
-MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8")
+MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5")
 
 # The client resolves ANTHROPIC_API_KEY from the environment automatically.
 client = anthropic.Anthropic()
@@ -90,7 +90,9 @@ def speaking_reply(part: int, messages: list[dict]) -> str:
     """Return the examiner's next spoken turn."""
     resp = client.messages.create(
         model=MODEL,
-        max_tokens=400,
+        max_tokens=2000,
+        # Thinking is always on for Opus 5.5; low effort keeps live replies fast.
+        output_config={"effort": "low"},
         system=_SPEAKING_SYSTEM.format(part=part),
         messages=messages,
     )
